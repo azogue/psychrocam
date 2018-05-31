@@ -15,7 +15,7 @@ services:
     ports:
       - "${PORT}:8000"
     volumes:
-      - ./custom:/psychrocam/psychrocam/static/custom
+      - ${CUSTOM_PATH}:/psychrocam/psychrocam/static/custom
     networks:
       - redis-net
     depends_on:

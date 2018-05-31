@@ -1,0 +1,38 @@
+os: linux
+sudo: required
+language: python
+python:
+  - "3.5"
+  - "3.6"
+
+services:
+  - docker
+
+install:
+#  - pip install psychrocam
+  - pip install .
+  - pip install coverage
+  - pip install pytest pytest-cov
+  - pip install coveralls
+
+env:
+  COMPOSE_PROJECT_NAME=psychrowebcam
+  RUNNING_IN_DOCKER=1
+
+  APP_SETTINGS=production
+  LOGGING_LEVEL=INFO
+  PORT=8000
+  CUSTOM_PATH=./custom
+
+  SECRET_KEY=alongsecretkeyforflask
+  SECURITY_PASSWORD_SALT=longersecretsecsaltforflask
+
+  REDIS_URL=redis://redis:6379/0
+  REDIS_PWD=ultrastrongpassword
+
+script:
+#  - py.test -v --cov psychrocam --cov-report term-missing
+  - docker-compose build psychrocam
+  - docker-compose up
+after_sucess:
+  - coveralls

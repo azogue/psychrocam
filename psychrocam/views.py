@@ -126,4 +126,4 @@ def clean_cache():
 
 @app.route('/', methods=['GET'])
 def index():
-    return redirect(url_for(ROUTE_SVGCHART))
+    return redirect(url_for('get_svg_chart'))

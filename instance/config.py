@@ -17,8 +17,6 @@ redis_url = os.getenv('REDIS_URL') \
             or f'redis://:{redis_pwd}@{redis_h}:{redis_p}/{redis_dbidx0}'
 
 secret_key = os.getenv('SECRET_KEY') or 'secretkeyforflask'
-security_password_salt = os.getenv('SECURITY_PASSWORD_SALT') \
-                         or 'longersecretkeyforflask'
 
 
 ###############################################################################
@@ -29,16 +27,13 @@ class Config(object):
     DEBUG = False
     TESTING = False
 
+    LOG_LEVEL = log_level
     API_PREFIX = ''
 
     # Forms protection
     CSRF_ENABLED = True
-    SECRET = secret_key
     SECRET_KEY = secret_key
-    # SECURITY_PASSWORD_SALT = security_password_salt
-    # app.config['WTF_CSRF_ENABLED'] = True
     JSONIFY_PRETTYPRINT_REGULAR = True
-    LOG_LEVEL = log_level
 
     # Redis config
     REDIS_HOST = 'redis' if docker_run else 'localhost'
