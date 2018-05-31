@@ -1,0 +1,36 @@
+history:
+  delta_arrows: 7200
+  scan_interval: 30
+
+homeassistant:
+  host: 192.168.1.10
+  api_password:
+  port: 8123
+  use_ssl:
+
+location:
+  altitude: 100
+  pressure_sensor:
+
+sun:
+#sun: sun.sun
+
+interior:
+#  Interior room:
+#    orientation: NE
+#    temperature: sensor.temperature
+#    humidity: sensor.humidity
+#    style:
+#      color: 'darkorange'
+#      markersize: 15
+#      alpha: .7
+exterior:
+#  Outside:
+#    orientation: SW
+#    temperature: sensor.temperature
+#    humidity: sensor.humidity
+#    style:
+#      color: 'darkgreen'
+#      markersize: 15
+#      alpha: .7
+

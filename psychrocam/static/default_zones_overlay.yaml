@@ -1,0 +1,19 @@
+zones:
+- label: Summer
+  points_x: [23, 28]
+  points_y: [40, 60]
+  style:
+    edgecolor: [1.0, 0.749, 0.0, 0.8]
+    facecolor: [1.0, 0.749, 0.0, 0.2]
+    linestyle: --
+    linewidth: 2
+  zone_type: dbt-rh
+- label: Winter
+  points_x: [18, 23]
+  points_y: [35, 55]
+  style:
+    edgecolor: [0.498, 0.624, 0.8]
+    facecolor: [0.498, 0.624, 1.0, 0.2]
+    linestyle: --
+    linewidth: 2
+  zone_type: dbt-rh
