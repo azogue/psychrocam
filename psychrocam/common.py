@@ -9,13 +9,14 @@ import yaml
 # PATHS
 ###############################################################################
 basedir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static')
+customdir = os.path.join(basedir, 'custom')
 HA_CONFIG_DEFAULT = os.path.join(basedir, 'default_ha_sensors.yaml')
-HA_CONFIG_CUSTOM = os.path.join(basedir, '_custom_ha_sensors.yaml')
+HA_CONFIG_CUSTOM = os.path.join(customdir, 'custom_ha_sensors.yaml')
 
 CHART_STYLE_DEFAULT = os.path.join(basedir, 'default_chart_style.yaml')
-CHART_STYLE_CUSTOM = os.path.join(basedir, '_custom_chart_style.yaml')
+CHART_STYLE_CUSTOM = os.path.join(customdir, 'custom_chart_style.yaml')
 CHART_ZONES_DEFAULT = os.path.join(basedir, 'default_zones_overlay.yaml')
-CHART_ZONES_CUSTOM = os.path.join(basedir, '_custom_zones_overlay.yaml')
+CHART_ZONES_CUSTOM = os.path.join(customdir, 'custom_zones_overlay.yaml')
 
 ###############################################################################
 # Common methods

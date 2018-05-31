@@ -29,6 +29,8 @@ class Config(object):
     DEBUG = False
     TESTING = False
 
+    API_PREFIX = ''
+
     # Forms protection
     CSRF_ENABLED = True
     SECRET = secret_key
@@ -53,7 +55,6 @@ class DevelopmentConfig(Config):
     """Configurations for Development."""
     DEBUG = True
     # API_PREFIX = '/api_v2'
-    API_PREFIX = ''
 
     REDIS_DB = redis_dbidx1
 
@@ -62,7 +63,7 @@ class TestingConfig(Config):
     """Configurations for Testing, with a separate test database."""
     TESTING = True
     DEBUG = True
-    API_PREFIX = '/api_v3'
+    # API_PREFIX = '/api_v3'
 
     REDIS_DB = redis_dbidx1
 
@@ -71,7 +72,7 @@ class ProductionConfig(Config):
     """Configurations for Production."""
     DEBUG = False
     TESTING = False
-    API_PREFIX = '/api_v0'
+    # API_PREFIX = '/api_v0'
 
 
 app_config = {
