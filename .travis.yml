@@ -25,7 +25,6 @@ env:
   CUSTOM_PATH=./custom
 
   SECRET_KEY=alongsecretkeyforflask
-  SECURITY_PASSWORD_SALT=longersecretsecsaltforflask
 
   REDIS_URL=redis://redis:6379/0
   REDIS_PWD=ultrastrongpassword

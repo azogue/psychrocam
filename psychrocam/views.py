@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from flask import request, redirect, url_for
+from flask import request, redirect, url_for, jsonify
 
 from psychrocam import (
     app, image_response, json_response, json_error,
     ROUTE_CHARTCONFIG, ROUTE_HA_CONFIG, ROUTE_HA_STATES,
-    ROUTE_CLEAN_CACHE, ROUTE_SVGCHART)
+    ROUTE_CLEAN_CACHE, ROUTE_SVGCHART, ROUTE_HA_EVOLUTION)
 from psychrocam.redis_mng import get_var, set_var, has_var
 from psychrocam.tasks import (
     clean_cache_data, create_psychrochart, reload_ha_config)
@@ -103,13 +103,23 @@ def homeassistant_states():
     return json_response(ha_states)
 
 
+@app.route(ROUTE_HA_EVOLUTION, methods=['GET'])
+def get_homeassistant_sensors_evolution():
+    ha_evolution = get_var('ha_evolution')
+    if ha_evolution:
+        # Without response schema (direct use with HA REST sensor)
+        return jsonify(ha_evolution)
+    # Do something!
+    return json_error(500002, error_msg="No history data available!")
+
+
 @app.route(ROUTE_SVGCHART, methods=['GET'])
 def get_svg_chart():
     svg = get_var('svg_chart')
     if svg:
         return image_response(svg, image_type='svg')
     # Do something!
-    return json_error(500, error_msg="No SVG image available!")
+    return json_error(500001, error_msg="No SVG image available!")
 
     # TODO POST points/zones/etc
 

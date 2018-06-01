@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Extract sensor values from a remote Home Assistant instance."""
 from collections import deque
+import datetime as dt
 import logging
 
 from homeassistant import remote
@@ -153,6 +154,39 @@ def _mb2kpa(pressure_mb):
     return pressure_mb / 10.
 
 
+def _make_ev_data(first_point, mid_point, end_point):
+    def _make_delta(start, end):
+        ts_f = dt.datetime.fromtimestamp(end['ts'])
+        ts_0 = dt.datetime.fromtimestamp(start['ts'])
+        delta_ts = (ts_f - ts_0).total_seconds()
+        if delta_ts == 0:
+            delta_ts = 3600
+            logging.debug(f"Error ∆t=0: {ts_0, ts_f}")
+        delta_temp = end['xy'][0] - start['xy'][0]
+        return {
+            '∆t [min]': round(delta_ts / 60, 1),
+            '∆T [°C]': round(delta_temp, 1),
+            '∆HR [%]': round(end['xy'][1] - start['xy'][1], 1),
+            '∆T [°C/h]': round(delta_temp / (delta_ts / 3600), 3),
+            'T [°C]': start['xy'][0],
+            'HR [%]': start['xy'][1],
+            'ts': ts_0.isoformat()
+        }
+
+    out = {
+        "last": {
+            'T [°C]': mid_point['xy'][0],
+            'HR [%]': mid_point['xy'][1]}
+    }
+
+    if first_point:
+        out['first'] = _make_delta(first_point, end_point)
+    if mid_point:
+        out['mid'] = _make_delta(mid_point, end_point)
+
+    return out
+
+
 def make_points_from_states(states):
     # Make points
     sensors = get_var('ha_sensors')
@@ -208,7 +242,8 @@ def make_points_from_states(states):
     points_dq.append(points)
     set_var('deque_points', points_dq, pickle_object=True)
 
-    if len(points_dq) > 1:
+    num_points_dq = len(points_dq)
+    if num_points_dq > 1:
         # arrows = {k: [p['xy'], points_dq[0][k]['xy']]
         #           for k, p in points.items() if k in points_dq[0]
         #           and p != points_dq[0][k]}
@@ -218,3 +253,18 @@ def make_points_from_states(states):
                   and p != points_dq[0][k]}
         # logging.info('MAKE ARROWS: %s', arrows)
         set_var('arrows', arrows)
+
+    # Make evolution JSON endpoint with history
+    if num_points_dq > 3:
+        ev_data = {
+            "num_points": num_points_dq,
+            "pressure_kPa": get_var('pressure_kpa')}
+
+        start_p = points_dq[0]
+        mid_p = points_dq[num_points_dq // 2 - 1]
+        end_p = points_dq[-1]
+        ev_data.update(
+            {key: _make_ev_data(start_p.get(key), mid_p.get(key), point)
+             for key, point in end_p.items()})
+        logging.debug(f"EVOLUTION_DATA: {ev_data}")
+        set_var('ha_evolution', ev_data)

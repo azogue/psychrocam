@@ -3,41 +3,13 @@ import datetime as dt
 from io import BytesIO
 import logging
 
-import numpy as np
-from scipy.spatial import ConvexHull
-
 from psychrochart.chart import PsychroChart, load_config
-from psychrochart.equations import (
-    humidity_ratio, saturation_pressure_water_vapor)
 from psychrocam.redis_mng import get_var, set_var
 
 
 ###############################################################################
 # PSYCHROCHART SVG GENERATION
 ###############################################################################
-def append_convex_hull_zones(chart, groups, points):
-    for convex_hull_zone, style_line, style_fill in groups:
-        int_points = np.array(
-            [(point['xy'][0],
-              1000 * humidity_ratio(saturation_pressure_water_vapor(
-                  point['xy'][0]) * point['xy'][1] / 100.,
-                                    chart.p_atm_kpa))
-             for name, point in points.items() if name in convex_hull_zone])
-
-        if len(int_points) < 3:
-            continue
-
-        hull = ConvexHull(int_points)
-        # noinspection PyUnresolvedReferences
-        for simplex in hull.simplices:
-            chart._handlers_annotations.append(
-                chart.axes.plot(int_points[simplex, 0],
-                                int_points[simplex, 1], **style_line))
-        chart._handlers_annotations.append(
-            chart.axes.fill(int_points[hull.vertices, 0],
-                            int_points[hull.vertices, 1], **style_fill))
-
-
 def make_psychrochart(altitude=None, pressure_kpa=None,
                       points=None, connectors=None,
                       arrows=None, interior_zones=None):
@@ -106,16 +78,8 @@ def make_psychrochart(altitude=None, pressure_kpa=None,
                 fontsize=10, color='darkgrey')
 
     if points:
-        # TODO fix interior_zones type
-        # chart.plot_points_dbt_rh(
-        #     points, connectors,
-        #     [k for k in interior_zones if k in points])
-            # list(filter(lambda x: x in points, interior_zones)))
-        # elif points:
-        if interior_zones is not None:
-            append_convex_hull_zones(chart, interior_zones, points)
-
-        chart.plot_points_dbt_rh(points, connectors)
+        chart.plot_points_dbt_rh(points, connectors,
+                                 convex_groups=interior_zones)
 
     chart.plot_legend(
         frameon=False, fontsize=8, labelspacing=.8, markerscale=.7)

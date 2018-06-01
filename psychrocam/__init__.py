@@ -70,6 +70,7 @@ celery.conf.update(app.config)
 ###############################################################################
 ROUTE_HA_CONFIG = '/ha_config'
 ROUTE_HA_STATES = '/ha_states'
+ROUTE_HA_EVOLUTION = '/ha_evolution'
 ROUTE_CHARTCONFIG = '/chartconfig'
 ROUTE_SVGCHART = '/svgchart'
 ROUTE_CLEAN_CACHE = '/clean'
