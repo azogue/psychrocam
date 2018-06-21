@@ -76,7 +76,7 @@ interior:
 
 # Exterior sensor pairs
 exterior:
-  Outside:
+  Terraza:
     humidity: sensor.sensor_terraza_humidity
     style:
       alpha: 0.7
@@ -93,6 +93,125 @@ exterior:
 ```
 
 And go to [host:7777/svgchart](http://0.0.0.0:7777/svgchart) to show the last SVG psychrometric chart, or check [/ha_states](http://0.0.0.0:7777/ha_states), [/ha_config](http://0.0.0.0:7777/ha_config) and [/chartconfig](http://0.0.0.0:7777/chartconfig).
+
+## Home Assistant integration
+
+To see your psychrometric data in Home Assistant, add this generic camera:
+
+```yaml
+homeassistant:
+  customize:
+    camera.psychrometric_chart:
+      friendly_name: Diagrama psicrométrico
+
+camera:
+  - platform: generic
+    name: psychrometric_chart
+    still_image_url: http://192.168.1.33:7777/svgchart
+    content_type: 'image/svg+xml'
+```
+
+You can add extra sensors to HA based on the evolution of watched states, that are present in other routes of this API (_this is a work in progress_).
+
+In `/ha_evolution` you can access this JSON data:
+
+```json
+{
+  "Office": {
+    "first": {
+      "HR [%]": 42.2,
+      "T [°C]": 25.6,
+      "ts": "2018-06-21T07:11:19.575077",
+      "∆HR [%]": -0.2,
+      "∆T [°C/h]": 0.766,
+      "∆T [°C]": 2.3,
+      "∆t [min]": 180.2
+    },
+    "last": {
+      "HR [%]": 40.8,
+      "T [°C]": 26.1
+    },
+    "mid": {
+      "HR [%]": 40.8,
+      "T [°C]": 26.1,
+      "ts": "2018-06-21T08:41:06.489618",
+      "∆HR [%]": 1.2,
+      "∆T [°C/h]": 1.195,
+      "∆T [°C]": 1.8,
+      "∆t [min]": 90.4
+    }
+  },
+  ... ,
+  "Terraza": {
+    "first": {
+      "HR [%]": 41.8,
+      "T [°C]": 26.9,
+      "ts": "2018-06-21T07:11:31.281293",
+      "∆HR [%]": -0.7,
+      "∆T [°C/h]": 1.001,
+      "∆T [°C]": 3.0,
+      "∆t [min]": 179.9
+    },
+    "last": {
+      "HR [%]": 24.3,
+      "T [°C]": 37.1
+    },
+    "mid": {
+      "HR [%]": 24.3,
+      "T [°C]": 37.1,
+      "ts": "2018-06-21T08:41:24.038771",
+      "∆HR [%]": 16.8,
+      "∆T [°C/h]": -4.8,
+      "∆T [°C]": -7.2,
+      "∆t [min]": 90.0
+    }
+  },
+  "num_points": 720,
+  "pressure_kPa": 101.71
+}
+
+```
+
+
+An example of integration would be adding some sensors showing the temperature rate change (to use them in automations). This can be done with a REST sensor and some template sensors exploiting its attributes:
+
+```yaml
+homeassistant:
+  customize:
+    sensor.psychrometric_evolution:
+      hidden: True
+  customize_glob:
+    sensor.temp_change_*:
+      icon: mdi:delta
+
+sensor:
+  - platform: rest
+    name: psychrometric_evolution
+    resource: http://192.168.1.33:7777/ha_evolution
+    unit_of_measurement: "sample"
+    json_attributes:
+      - pressure_kPa
+      - Office
+      - Salón
+      - Terraza
+    scan_interval: 30
+    value_template: '{{ value_json.num_points | int }}'
+
+  - platform: template
+    sensors:
+      temp_change_office:
+        friendly_name: '∆T Office'
+        value_template: '{% if "Office" in states.sensor.psychrometric_evolution.attributes %}{{ states.sensor.psychrometric_evolution.attributes["Office"]["first"]["∆T [°C/h]"] | round(2)  }}{% endif %}'
+        unit_of_measurement: '°C/h'
+      temp_change_livingroom:
+        friendly_name: '∆T Salón'
+        value_template: '{% if "Salón" in states.sensor.psychrometric_evolution.attributes %}{{ states.sensor.psychrometric_evolution.attributes["Salón"]["first"]["∆T [°C/h]"] | round(2) }}{% endif %}'
+        unit_of_measurement: '°C/h'
+      temp_change_terraza:
+        friendly_name: '∆T Terraza'
+        value_template: '{% if "Terraza" in states.sensor.psychrometric_evolution.attributes %}{{ states.sensor.psychrometric_evolution.attributes["Terraza"]["first"]["∆T [°C/h]"] | round(2) }}{% endif %}'
+        unit_of_measurement: '°C/h'
+```
 
 ## TODO
 
