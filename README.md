@@ -1,6 +1,6 @@
 # psychrocam - A flask API for serving `psychrochart` SVG files like a webcam
 
-![HA View](https://github.com/azogue/psychrocam/blob/master/screenshots/svgchart.svg?raw=true)
+<img src="https://rawgit.com/azogue/psychrocam/master/screenshots/svgchart.svg" width="100%" height="100%">
 
 ## Description
 
