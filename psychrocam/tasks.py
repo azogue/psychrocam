@@ -113,7 +113,7 @@ def periodic_get_ha_states():
     states = get_states()
     if not states:
         logging.error(f"Can't load HA states!")
-        return {}
+        return
 
     make_points_from_states(states)
     ok = make_psychrochart()
@@ -138,4 +138,3 @@ def periodic_get_ha_states():
         remove_var('chart_zones')
         _load_chart_config()
 
-    return ok

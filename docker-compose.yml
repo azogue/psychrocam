@@ -2,15 +2,16 @@ version: '3'
 
 services:
   psychrocam:
-    image: azogue/psychrocam:latest
-    build: .
+    image: "azogue/psychrocam:${LABEL}"
+    build:
+      context: .
+      args:
+        label: '${LABEL}'
     container_name: psychrocam
     restart: always
     environment:
-      - APP_SETTINGS=${APP_SETTINGS}
       - LOGGING_LEVEL=${LOGGING_LEVEL}
-      - RUNNING_IN_DOCKER=${RUNNING_IN_DOCKER}
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=redis://:${REDIS_PWD}@redis:6379/0
       - REDIS_PWD=${REDIS_PWD}
     ports:
       - "${PORT}:8000"

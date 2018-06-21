@@ -1,4 +1,7 @@
-FROM sgtdck/python-plot
+ARG label
+ARG image_label=azogue/web-service:${label}
+
+FROM $image_label
 
 RUN apk update
 RUN apk add supervisor

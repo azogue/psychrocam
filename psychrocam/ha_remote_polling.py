@@ -128,7 +128,7 @@ def get_states():
                   for s in filter(lambda x: x.entity_id in entities,
                                   remote.get_states(api))}
         set_var('ha_states', states, pickle_object=True)
-    except remote.HomeAssistantError:
+    except (ConnectionRefusedError, remote.HomeAssistantError):
         states = {}
 
     return states

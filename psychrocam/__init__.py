@@ -12,46 +12,53 @@ from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.exceptions import default_exceptions, HTTPException
 from werkzeug.routing import Rule
 
-from instance.config import app_config
-
 
 __version__ = '0.1'
 
 ###############################################################################
 # local import
 ###############################################################################
-config_name = os.getenv('APP_SETTINGS') or "development"
-docker_run = os.getenv('RUNNING_IN_DOCKER') or False
-config_object = app_config[config_name]
-prefix_web = config_object.API_PREFIX
-log_level = config_object.LOG_LEVEL
+log_level = os.getenv('LOGGING_LEVEL') or 'INFO'
+prefix_web = os.getenv('API_PREFIX') or ''
+redis_pwd = os.getenv('REDIS_PWD') or ''
+redis_host = 'redis'
+redis_port = 6379
+redis_db = 0
+redis_url = os.getenv('REDIS_URL') or f'redis://:{redis_pwd}' \
+                                      f'@{redis_host}:{redis_port}/{redis_db}'
 
 ###############################################################################
 # LOG SETTINGS
 ###############################################################################
-basedir = os.path.abspath(os.path.dirname(__file__))
 logging_conf = {
     "level": log_level,
     "datefmt": '%d/%m/%Y %H:%M:%S',
     "format": '%(levelname)s [%(filename)s_%(funcName)s] '
               '- %(asctime)s: %(message)s'}
-# if not docker_run:
-#     logging_conf["filename"] = os.path.join(basedir, 'psychrocam_api.log')
 logging.basicConfig(**logging_conf)
 
 ###############################################################################
 # Flask app
 ###############################################################################
-STATIC_PATH = os.path.join(basedir, 'static')
-
+basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__,
             static_url_path=prefix_web + '/static',
-            static_folder=STATIC_PATH)
+            static_folder=os.path.join(basedir, 'static'))
 # app = FlaskAPI(__name__, instance_relative_config=True)
-app.config.from_object(config_object)
+# app.config.from_object(config_object)
+app.config['DEBUG'] = False
+app.config['TESTING'] = False
+app.config['REDIS_HOST'] = redis_host
+app.config['REDIS_PORT'] = redis_port
+app.config['REDIS_DB'] = redis_db
+app.config['REDIS_PASSWORD'] = redis_pwd
+
+# Celery config
+app.config['CELERY_BROKER_URL'] = redis_url
+app.config['CELERY_RESULT_BACKEND'] = redis_url
+
 app.url_rule_class = lambda path, **options: Rule(prefix_web + path, **options)
 app.logger.addHandler(logging.StreamHandler())
-
 
 ###############################################################################
 # Redis in-memory-DB
@@ -63,7 +70,6 @@ redis = Redis(app)
 ###############################################################################
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
-# celery.select_queues()
 
 ###############################################################################
 # ROUTES
@@ -195,9 +201,7 @@ else:
     app.wsgi_app = ProxyFix(app.wsgi_app)
 
     # mark init in log
-    logging.debug(f"***INIT*** in {config_name.upper()} mode, with: "
-                  f"Log level: {log_level}, "
-                  f"Docker: {docker_run}, "
+    logging.warning(f"***INIT*** with: Log level: {log_level}, "
                   f"Debug: {app.config['DEBUG']}, "
                   f"Testing: {app.config['TESTING']}, "
                   f"API prefix: {prefix_web}, "
