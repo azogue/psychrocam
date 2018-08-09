@@ -14,7 +14,7 @@ Flask-And-Redis==0.7
 celery==4.1.1
 
 numpy
-scipy
-matplotlib
-psychrochart
-homeassistant
+# scipy
+matplotlib==2.0.2
+psychrochart==0.2.2
+homeassistant==0.65.0

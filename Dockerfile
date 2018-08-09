@@ -1,19 +1,23 @@
-ARG label
-ARG image_label=azogue/web-service:${label}
+ARG label_arch=x64
+ARG image_label=azogue/py36_base:${label_arch}
 
 FROM $image_label
 
-RUN apk update
-RUN apk add supervisor
+LABEL maintainer="eugenio.panadero@gmail.com"
+LABEL maintainer_name="Eugenio Panadero"
 
+ARG label_arch=rpi3
+RUN if [ "$label_arch" = "x64" ] ; then apk add supervisor freetype libpng-dev; else apt-get install libfreetype6-dev libpng12-dev pkg-config supervisor ; fi
+
+ADD ./requirements.txt .
+RUN pip install -r requirements.txt
+
+RUN groupadd nobody
 RUN mkdir /var/run/celery
 RUN chown -R nobody:nobody /var/run/celery/
 
 RUN mkdir psychrocam
 COPY . psychrocam
-
-RUN pip install --upgrade pip
-RUN pip install -r /psychrocam/requirements.txt
 
 WORKDIR /psychrocam
 ENV PYTHONPATH /psychrocam

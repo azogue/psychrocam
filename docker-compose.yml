@@ -6,7 +6,7 @@ services:
     build:
       context: .
       args:
-        label: '${LABEL}'
+        label_arch: '${LABEL}'
     container_name: psychrocam
     restart: always
     environment:

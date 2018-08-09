@@ -13,9 +13,7 @@ This little project consist in 2 docker containers running:
 - A Redis database.
 - The main container, running supervisor to execute:
   * A celery worker
- 
   * The celery beat, sending update tasks every `scan_interval` seconds
- 
   * Gunicorn serving the flask application
 
 ## Use with docker
@@ -30,11 +28,16 @@ export LOGGING_LEVEL=WARNING
 export CUSTOM_PATH="./custom_config"
 export REDIS_PWD="customultrasecurepassword"
 
-# Use one or the other depending on your host:
-# export LABEL="x86"
-export LABEL="rpi3_slim"
+# Use one or the other depending on your host architecture:
+# export LABEL=x64
+export LABEL=rpi3
 
+# Pull the container from docker hub:
+docker pull azogue/psychrocam:${LABEL}
 docker-compose up -d
+
+# Or build it
+docker-compose up -d --build
 ```
 
 ## Customize
