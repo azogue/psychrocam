@@ -28,7 +28,7 @@ figure:
     pad: -20
   y_label: null
 limits:
-  range_humidity_g_kg: [2.5, 17.5]
+  range_humidity_g_kg: [2.5, 20]
   range_temp_c: [15, 35]
   step_temp: 0.5
 chart_params:
@@ -51,11 +51,11 @@ chart_params:
   constant_v_labels: []
   constant_v_step: 0.01
   constant_wet_temp_label: null
-  constant_wet_temp_labels: [10, 15, 20]
+  constant_wet_temp_labels: [10, 15, 20, 25]
   constant_wet_temp_step: 5
   range_h: [20, 120]
   range_vol_m3_kg: [0.82, 0.94]
-  range_wet_temp: [10, 20]
+  range_wet_temp: [10, 31]
   with_constant_dry_temp: true
   with_constant_h: false
   with_constant_humidity: true

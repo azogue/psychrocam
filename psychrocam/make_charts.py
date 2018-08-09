@@ -82,7 +82,7 @@ def make_psychrochart(altitude=None, pressure_kpa=None,
                                  convex_groups=interior_zones)
 
     chart.plot_legend(
-        frameon=False, fontsize=8, labelspacing=.8, markerscale=.7)
+        frameon=False, fontsize=15, labelspacing=.8, markerscale=.8)
 
     bytes_svg = BytesIO()
     chart.save(bytes_svg, format='svg')
