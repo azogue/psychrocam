@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
 import logging
 from math import floor
 import os
@@ -56,6 +57,9 @@ app.config['REDIS_PASSWORD'] = redis_pwd
 # Celery config
 app.config['CELERY_BROKER_URL'] = redis_url
 app.config['CELERY_RESULT_BACKEND'] = redis_url
+app.config['CELERY_TASK_IGNORE_RESULT'] = True
+app.config['CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED'] = True
+app.config['CELERY_TASK_RESULT_EXPIRES'] = timedelta(seconds=300)
 
 app.url_rule_class = lambda path, **options: Rule(prefix_web + path, **options)
 app.logger.addHandler(logging.StreamHandler())
