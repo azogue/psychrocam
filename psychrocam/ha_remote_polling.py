@@ -5,6 +5,7 @@ import datetime as dt
 import logging
 
 from homeassistant import remote
+from homeassistant.exceptions import HomeAssistantError
 import matplotlib.colors as mcolors
 from requests.exceptions import ConnectionError
 from urllib3.exceptions import NewConnectionError, MaxRetryError
@@ -128,7 +129,9 @@ def get_states():
                   for s in filter(lambda x: x.entity_id in entities,
                                   remote.get_states(api))}
         set_var('ha_states', states, pickle_object=True)
-    except (ConnectionRefusedError, remote.HomeAssistantError):
+    except (HomeAssistantError,
+            ConnectionRefusedError,
+            remote.HomeAssistantError):
         states = {}
 
     return states
