@@ -80,6 +80,7 @@ def init_chart_config(sender, **kwargs):
 @celery.task()
 def create_psychrochart():
     make_psychrochart()
+    return True
 
 
 @celery.task()
@@ -100,11 +101,19 @@ def reload_ha_config():
     #     celery.add_periodic_task()
 
     periodic_get_ha_states()
+    return True
 
 
 @celery.task()
 def periodic_get_ha_states():
     """Background task to update the HA sensors states."""
+    making_chart_now = get_var('making_chart_now', default=False)
+    if making_chart_now:
+        logging.warning('last periodic_get_ha_states is not finished. '
+                        'Aborting this try...')
+        return
+
+    set_var('making_chart_now', True)
     _log_task_init("periodic_get_ha_states")
 
     _load_homeassistant_config()
@@ -113,6 +122,7 @@ def periodic_get_ha_states():
     states = get_states()
     if not states:
         logging.error(f"Can't load HA states!")
+        set_var('making_chart_now', False)
         return
 
     make_points_from_states(states)
@@ -138,3 +148,5 @@ def periodic_get_ha_states():
         remove_var('chart_zones')
         _load_chart_config()
 
+    set_var('making_chart_now', False)
+    return True
