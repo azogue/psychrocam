@@ -12,7 +12,7 @@ RUN if [ "$label_arch" = "x64" ] ; then apk add supervisor freetype libpng-dev; 
 ADD ./requirements.txt .
 RUN pip install -r requirements.txt
 
-RUN groupadd nobody
+RUN if [ "$label_arch" = "rpi3" ] ; then groupadd nobody; fi
 RUN mkdir /var/run/celery
 RUN chown -R nobody:nobody /var/run/celery/
 
