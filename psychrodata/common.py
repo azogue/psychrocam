@@ -8,7 +8,9 @@ import yaml
 ###############################################################################
 # PATHS
 ###############################################################################
-basedir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static')
+basedir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                       '..', 'psychrocam', 'static')
+
 customdir = os.path.join(basedir, 'custom')
 HA_CONFIG_DEFAULT = os.path.join(basedir, 'default_ha_sensors.yaml')
 HA_CONFIG_CUSTOM = os.path.join(customdir, 'custom_ha_sensors.yaml')

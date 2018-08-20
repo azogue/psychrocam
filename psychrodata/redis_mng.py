@@ -3,13 +3,33 @@
 import json
 import pickle
 
-from psychrocam import redis
+# from psychrocam import redis
+
+from celery import Celery
+from redis import StrictRedis
+
+from psychrodata import Config
 
 
 PREFIX_TYPE_VAR = '_type_var__key_'
 
 
-def set_var(key, value, expiration=None, pickle_object=False):
+def get_celery(main):
+    celery_obj = Celery(
+        main,
+        backend=Config.CELERY_RESULT_BACKEND,
+        broker=Config.CELERY_BROKER_URL)
+    celery_obj.config_from_object(Config)
+    return celery_obj
+
+
+def get_redis():
+    return StrictRedis(
+        host=Config.REDIS_HOST, port=Config.REDIS_PORT,
+        db=Config.REDIS_DB, password=Config.REDIS_PASSWORD)
+
+
+def set_var(redis, key, value, expiration=None, pickle_object=False):
     type_value = type(value)
     # print(f'Set var {key}, type: {type_value}')
     # TODO include dt.now() en metadata
@@ -30,7 +50,7 @@ def set_var(key, value, expiration=None, pickle_object=False):
         redis.expire(PREFIX_TYPE_VAR + key, expiration)
 
 
-def get_var(key, default=None, unpickle_object=False):
+def get_var(redis, key, default=None, unpickle_object=False):
     type_v = redis.get(PREFIX_TYPE_VAR + key)
     value = redis.get(key)
 
@@ -50,20 +70,20 @@ def get_var(key, default=None, unpickle_object=False):
         return json.loads(value)
 
 
-def has_var(key):
+def has_var(redis, key):
     return redis.exists(PREFIX_TYPE_VAR + key) and redis.exists(key)
 
 
-def remove_var(key):
+def remove_var(redis, key):
     redis.delete(key, PREFIX_TYPE_VAR + key)
 
 
-def get_var_keys(pattern='*'):
+def get_var_keys(redis, pattern='*'):
     return redis.keys(pattern)
 
 
-def clean_all_vars():
-    all_vars = get_var_keys(pattern=PREFIX_TYPE_VAR + '*')
+def clean_all_vars(redis):
+    all_vars = get_var_keys(redis, pattern=PREFIX_TYPE_VAR + '*')
     if all_vars:
         keys = [k.decode()[len(PREFIX_TYPE_VAR):] for k in all_vars]
         redis.delete(*keys)

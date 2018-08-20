@@ -1,38 +1,29 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
 import logging
 from math import floor
 import os
 import sys
 from time import time
 
-from celery import Celery
+# noinspection PyUnresolvedReferences
 from flask import Flask, jsonify, make_response, g
 from flask_redis import Redis
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.exceptions import default_exceptions, HTTPException
 from werkzeug.routing import Rule
 
+from psychrodata import Config
+# noinspection PyUnresolvedReferences
+from psychrodata.redis_mng import get_celery, get_var, set_var
 
 __version__ = '0.1'
 
-###############################################################################
-# local import
-###############################################################################
-log_level = os.getenv('LOGGING_LEVEL') or 'INFO'
-prefix_web = os.getenv('API_PREFIX') or ''
-redis_pwd = os.getenv('REDIS_PWD') or ''
-redis_host = 'redis'
-redis_port = 6379
-redis_db = 0
-redis_url = os.getenv('REDIS_URL') or f'redis://:{redis_pwd}' \
-                                      f'@{redis_host}:{redis_port}/{redis_db}'
 
 ###############################################################################
 # LOG SETTINGS
 ###############################################################################
 logging_conf = {
-    "level": log_level,
+    "level": Config.LOG_LEVEL,
     "datefmt": '%d/%m/%Y %H:%M:%S',
     "format": '%(levelname)s [%(filename)s_%(funcName)s] '
               '- %(asctime)s: %(message)s'}
@@ -43,25 +34,12 @@ logging.basicConfig(**logging_conf)
 ###############################################################################
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__,
-            static_url_path=prefix_web + '/static',
+            static_url_path=Config.PREFIX_WEB + '/static',
             static_folder=os.path.join(basedir, 'static'))
-# app = FlaskAPI(__name__, instance_relative_config=True)
-# app.config.from_object(config_object)
-app.config['DEBUG'] = False
-app.config['TESTING'] = False
-app.config['REDIS_HOST'] = redis_host
-app.config['REDIS_PORT'] = redis_port
-app.config['REDIS_DB'] = redis_db
-app.config['REDIS_PASSWORD'] = redis_pwd
-
-# Celery config
-app.config['CELERY_BROKER_URL'] = redis_url
-app.config['CELERY_RESULT_BACKEND'] = redis_url
-app.config['CELERY_TASK_IGNORE_RESULT'] = True
-app.config['CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED'] = True
-app.config['CELERY_TASK_RESULT_EXPIRES'] = timedelta(seconds=300)
-
-app.url_rule_class = lambda path, **options: Rule(prefix_web + path, **options)
+app.config.from_object(Config)
+if Config.PREFIX_WEB:
+    app.url_rule_class = lambda path, **options: Rule(
+        Config.PREFIX_WEB + path, **options)
 app.logger.addHandler(logging.StreamHandler())
 
 ###############################################################################
@@ -69,11 +47,29 @@ app.logger.addHandler(logging.StreamHandler())
 ###############################################################################
 redis = Redis(app)
 
+
 ###############################################################################
 # Celery
 ###############################################################################
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
+def create_celery(flask_app):
+    celery_obj = get_celery(flask_app.import_name)
+    # celery_obj.conf.update(flask_app.config)
+
+    # noinspection PyPep8Naming
+    TaskBase = celery_obj.Task
+
+    class ContextTask(TaskBase):  # pragma: no cover
+        abstract = True
+
+        def __call__(self, *args, **kwargs):
+            with flask_app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+
+    celery_obj.Task = ContextTask
+    return celery_obj
+
+
+celery = create_celery(app)
 
 ###############################################################################
 # ROUTES
@@ -193,8 +189,33 @@ logging.info(f"***IMPORTED {__name__}[v:{__version__}]*** "
              f"with ARGS: {sys.argv}")
 
 if sys.argv[0].endswith('celery'):
-    # noinspection PyUnresolvedReferences,PyPep8
-    from psychrocam.tasks import *
+    if 'beat' not in sys.argv:
+        logging.critical(f"CELERY BEAT NOT detected??: {sys.argv}")
+        sys.exit(-1)
+
+    # Celery beat, here we define the task scheduler
+    logging.warning(f"CELERY BEAT detected: {sys.argv}")
+
+    # noinspection PyUnusedLocal
+    @celery.on_after_configure.connect
+    def init_chart_config(sender, **kwargs):
+        # from psychrochartmaker import TASK_PERIODIC_GET_HA_STATES
+        from psychrochartmaker.tasks import periodic_get_ha_states
+        logging.warning(f"On INIT_CHART_CONFIG")
+        celery.send_task('clean_cache_data')
+
+        # Program HA polling schedule
+        ha_history = get_var(redis, 'ha_history')
+        scheduler = sender.add_periodic_task(
+            ha_history['scan_interval'],
+            periodic_get_ha_states.s(),
+            name='HA sensor update')
+        logging.info(f'DEBUG scheduler: {scheduler}')
+        set_var(redis, 'scheduler', scheduler)
+
+        # Make first psychrochart
+        celery.send_task('create_psychrochart')
+        return True
 else:
     # noinspection PyUnresolvedReferences,PyPep8
     from psychrocam.views import *
@@ -204,11 +225,10 @@ else:
     ###########################################################################
     app.wsgi_app = ProxyFix(app.wsgi_app)
 
-    # mark init in log
-    logging.warning(f"***INIT*** with: Log level: {log_level}, "
-                  f"Debug: {app.config['DEBUG']}, "
-                  f"Testing: {app.config['TESTING']}, "
-                  f"API prefix: {prefix_web}, "
-                  f"prop. exceptions: {app.config['PROPAGATE_EXCEPTIONS']}"
-                  f"Redis URL: {app.config['CELERY_BROKER_URL']}\n"
-                  f"ARGS: {sys.argv}")
+# mark init in log
+logging.warning(f"***INIT*** with: Log level: {Config.LOG_LEVEL}, "
+                f"Debug: {app.config['DEBUG']}, "
+                f"Testing: {app.config['TESTING']}, "
+                f"API prefix: {Config.PREFIX_WEB}, "
+                f"Redis URL: {app.config['CELERY_BROKER_URL']}\n"
+                f"ARGS: {sys.argv}")

@@ -17,7 +17,10 @@ RUN mkdir /var/run/celery
 RUN chown -R nobody:nobody /var/run/celery/
 
 RUN mkdir psychrocam
-COPY . psychrocam
+COPY supervisord.conf psychrocam/
+COPY ./psychrodata psychrocam/psychrodata
+COPY ./psychrocam psychrocam/psychrocam
+COPY ./psychrochartmaker psychrocam/psychrochartmaker
 
 WORKDIR /psychrocam
 ENV PYTHONPATH /psychrocam

@@ -4,30 +4,31 @@ from io import BytesIO
 import logging
 
 from psychrochart.chart import PsychroChart, load_config
-from psychrocam.redis_mng import get_var, set_var
+
+from psychrodata.redis_mng import get_var, set_var
 
 
 ###############################################################################
 # PSYCHROCHART SVG GENERATION
 ###############################################################################
-def make_psychrochart(altitude=None, pressure_kpa=None,
+def make_psychrochart(redis, altitude=None, pressure_kpa=None,
                       points=None, connectors=None,
                       arrows=None, interior_zones=None):
     """Create the PsychroChart SVG file and save it to disk."""
     # Load chart style:
-    chart_style = load_config(get_var('chart_style'))
-    zones = get_var('chart_zones')
+    chart_style = load_config(get_var(redis, 'chart_style'))
+    zones = get_var(redis, 'chart_zones')
 
     if altitude is None:  # Try redis key
-        altitude = get_var('altitude')
+        altitude = get_var(redis, 'altitude')
     if pressure_kpa is None:  # Try redis key
-        pressure_kpa = get_var('pressure_kpa')
+        pressure_kpa = get_var(redis, 'pressure_kpa')
     if points is None:  # Try redis key
-        points = get_var('last_points', default={})
+        points = get_var(redis, 'last_points', default={})
     if arrows is None:  # Try redis key
-        arrows = get_var('arrows')
+        arrows = get_var(redis, 'arrows')
     if interior_zones is None:  # Try redis key
-        interior_zones = get_var('interior_zones')
+        interior_zones = get_var(redis, 'interior_zones')
 
     p_label = ''
     if pressure_kpa is not None:
@@ -65,7 +66,8 @@ def make_psychrochart(altitude=None, pressure_kpa=None,
     if arrows:
         chart.plot_arrows_dbt_rh(arrows)
         # Append history label
-        points_dq = get_var('deque_points', default=[], unpickle_object=True)
+        points_dq = get_var(redis, 'deque_points',
+                            default=[], unpickle_object=True)
         if len(points_dq) > 2:
             start = list(points_dq[0].values())[0]
             end = list(points_dq[-1].values())[0]
@@ -87,10 +89,10 @@ def make_psychrochart(altitude=None, pressure_kpa=None,
     bytes_svg = BytesIO()
     chart.save(bytes_svg, format='svg')
     bytes_svg.seek(0)
-    set_var('svg_chart', bytes_svg.read())
-    set_var('chart_axes', chart.axes, pickle_object=True)
+    set_var(redis, 'svg_chart', bytes_svg.read())
+    set_var(redis, 'chart_axes', chart.axes, pickle_object=True)
 
     chart.remove_annotations()
-    set_var('chart', chart, pickle_object=True)
+    set_var(redis, 'chart', chart, pickle_object=True)
 
     return True

@@ -4,27 +4,26 @@ from collections import deque
 import datetime as dt
 import logging
 
-from homeassistant import remote
-from homeassistant.exceptions import HomeAssistantError
 import matplotlib.colors as mcolors
 from requests.exceptions import ConnectionError
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 
-from psychrocam.redis_mng import get_var, set_var, has_var, remove_var
+from psychrochartmaker.remote import API, get_states, HomeAssistantError
+from psychrodata.redis_mng import get_var, set_var, has_var, remove_var
 
 
 ###############################################################################
 # HA Config
 ###############################################################################
-def parse_config_ha(yaml_config):
+def parse_config_ha(redis, yaml_config):
     location_config = yaml_config['location']
     if 'altitude' in location_config:
-        set_var('altitude', location_config['altitude'])
+        set_var(redis, 'altitude', location_config['altitude'])
     if 'pressure_sensor' in location_config:
-        set_var('pressure_sensor', location_config['pressure_sensor'])
+        set_var(redis, 'pressure_sensor', location_config['pressure_sensor'])
 
     history_config = yaml_config['history']
-    set_var('ha_history', history_config)
+    set_var(redis, 'ha_history', history_config)
 
     # Get HA sensors
     interior_sensors = yaml_config['interior']
@@ -47,7 +46,7 @@ def parse_config_ha(yaml_config):
              dict(color='darkblue', lw=1, alpha=.5, ls='--'),
              dict(color='darkblue', lw=0, alpha=.3)),
         ]
-        set_var('interior_zones', interior_zones)
+        set_var(redis, 'interior_zones', interior_zones)
 
     # TODO implement sun position and irradiations
     # sun_sensor = yaml_config['sun']
@@ -63,20 +62,20 @@ def parse_config_ha(yaml_config):
     #     sensors.update({"sun": sun_sensor})
 
     if sensors:
-        set_var('ha_sensors', sensors)
+        set_var(redis, 'ha_sensors', sensors)
 
     # Get HA API
     ha_config = yaml_config['homeassistant']
-    set_var('ha_config', ha_config)
+    set_var(redis, 'ha_config', ha_config)
 
-    set_var('ha_yaml_config', yaml_config)
+    set_var(redis, 'ha_yaml_config', yaml_config)
 
 
 ###############################################################################
 # HA remote polling
 ###############################################################################
-def get_ha_api():
-    ha_config = get_var('ha_config')
+def get_ha_api(redis):
+    ha_config = get_var(redis, 'ha_config')
     logging.debug(f"HA API config: {ha_config}")
 
     # Get HA API
@@ -85,29 +84,29 @@ def get_ha_api():
                       port=ha_config.get('port', 8123),
                       use_ssl=ha_config.get('use_ssl', False))
     try:
-        api = remote.API(**api_params)
+        api = API(**api_params)
         try:
             assert api.validate_api(force_validate=True)
-            set_var('ha_api', api, pickle_object=True)
+            set_var(redis, 'ha_api', api, pickle_object=True)
         except AssertionError:
             logging.error(f"No HA API found. Removing config from cache")
-            if has_var('ha_api'):
-                remove_var('ha_api')
-    except (remote.HomeAssistantError, ConnectionError,
+            if has_var(redis, 'ha_api'):
+                remove_var(redis, 'ha_api')
+    except (HomeAssistantError, ConnectionError,
             NewConnectionError, MaxRetryError) as exc:
         logging.error(f"{exc.__class__}: {str(exc)}")
         return
 
 
-def get_states():
-    api = get_var('ha_api', unpickle_object=True)
+def get_ha_states(redis):
+    api = get_var(redis, 'ha_api', unpickle_object=True)
     if not api:
         logging.error(f"No HA API loaded, aborting get_states")
-        if has_var('ha_states'):
-            remove_var('ha_states')
+        if has_var(redis, 'ha_states'):
+            remove_var(redis, 'ha_states')
         return {}
 
-    sensors = get_var('ha_sensors')
+    sensors = get_var(redis, 'ha_sensors')
     logging.debug(f"Sensors: {sensors}")
     entities = []
     if "pressure_sensor" in sensors:
@@ -127,11 +126,9 @@ def get_states():
     try:
         states = {s.entity_id: s.as_dict()
                   for s in filter(lambda x: x.entity_id in entities,
-                                  remote.get_states(api))}
-        set_var('ha_states', states, pickle_object=True)
-    except (HomeAssistantError,
-            ConnectionRefusedError,
-            remote.HomeAssistantError):
+                                  get_states(api))}
+        set_var(redis, 'ha_states', states, pickle_object=True)
+    except (ConnectionRefusedError, HomeAssistantError):
         states = {}
 
     return states
@@ -190,16 +187,16 @@ def _make_ev_data(first_point, mid_point, end_point):
     return out
 
 
-def make_points_from_states(states):
+def make_points_from_states(redis, states):
     # Make points
-    sensors = get_var('ha_sensors')
-    points = get_var('last_points', default={})
-    points_unknown = get_var('points_unknown', default=[])
+    sensors = get_var(redis, 'ha_sensors')
+    points = get_var(redis, 'last_points', default={})
+    points_unknown = get_var(redis, 'points_unknown', default=[])
 
     for sensor_group in sensors.values():
         if isinstance(sensor_group, str):
             try:
-                set_var('pressure_kpa',
+                set_var(redis, 'pressure_kpa',
                         _mb2kpa(float(states[sensor_group]['state'])))
             except ValueError:
                 logging.error(f"Bad pressure read from {sensor_group}")
@@ -227,11 +224,11 @@ def make_points_from_states(states):
                     f"{states[p_config['temperature']]['state']}ºC, "
                     f"{states[p_config['humidity']]['state']}%]")
                 points_unknown.append(key)
-    set_var('last_points', points)
-    set_var('points_unknown', points_unknown)
+    set_var(redis, 'last_points', points)
+    set_var(redis, 'points_unknown', points_unknown)
 
     # Make arrows
-    history_config = get_var('ha_history', default={})
+    history_config = get_var(redis, 'ha_history', default={})
     if 'delta_arrows' not in history_config or \
             not history_config['delta_arrows']:
         return
@@ -239,11 +236,11 @@ def make_points_from_states(states):
     delta_arrows = history_config['delta_arrows']
     scan_interval = history_config['scan_interval']
     len_deque = max(3, int(delta_arrows / scan_interval))
-    points_dq = get_var('deque_points',
+    points_dq = get_var(redis, 'deque_points',
                         default=deque([], maxlen=len_deque),
                         unpickle_object=True)
     points_dq.append(points)
-    set_var('deque_points', points_dq, pickle_object=True)
+    set_var(redis, 'deque_points', points_dq, pickle_object=True)
 
     num_points_dq = len(points_dq)
     if num_points_dq > 1:
@@ -255,13 +252,13 @@ def make_points_from_states(states):
                   for k, p in points.items() if k in points_dq[0]
                   and p != points_dq[0][k]}
         # logging.info('MAKE ARROWS: %s', arrows)
-        set_var('arrows', arrows)
+        set_var(redis, 'arrows', arrows)
 
     # Make evolution JSON endpoint with history
     if num_points_dq > 3:
         ev_data = {
             "num_points": num_points_dq,
-            "pressure_kPa": get_var('pressure_kpa')}
+            "pressure_kPa": get_var(redis, 'pressure_kpa')}
 
         start_p = points_dq[0]
         mid_p = points_dq[num_points_dq // 2 - 1]
@@ -270,4 +267,4 @@ def make_points_from_states(states):
             {key: _make_ev_data(start_p.get(key), mid_p.get(key), point)
              for key, point in end_p.items()})
         logging.debug(f"EVOLUTION_DATA: {ev_data}")
-        set_var('ha_evolution', ev_data)
+        set_var(redis, 'ha_evolution', ev_data)
