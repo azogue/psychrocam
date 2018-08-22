@@ -105,7 +105,7 @@ def periodic_get_ha_states():
     states = get_ha_states(redis)
     if not states:
         logging.error(f"Can't load HA states!")
-        set_var(redis, 'making_chart_now', False)
+        set_var(redis, 'making_chart_now', 0)
         return
 
     logging.debug('making points...')
