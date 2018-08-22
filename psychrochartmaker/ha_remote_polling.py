@@ -6,7 +6,8 @@ import logging
 
 import matplotlib.colors as mcolors
 from requests.exceptions import ConnectionError
-from urllib3.exceptions import NewConnectionError, MaxRetryError
+from urllib3.exceptions import (
+    NewConnectionError, MaxRetryError, ReadTimeoutError)
 
 from psychrochartmaker.remote import API, get_states, HomeAssistantError
 from psychrodata.redis_mng import get_var, set_var, has_var, remove_var
@@ -128,7 +129,7 @@ def get_ha_states(redis):
                   for s in filter(lambda x: x.entity_id in entities,
                                   get_states(api))}
         set_var(redis, 'ha_states', states, pickle_object=True)
-    except (ConnectionRefusedError, HomeAssistantError):
+    except (ReadTimeoutError, ConnectionRefusedError, HomeAssistantError):
         states = {}
 
     return states

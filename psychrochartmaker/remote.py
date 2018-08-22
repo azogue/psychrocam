@@ -324,7 +324,7 @@ class API:
 
         except requests.exceptions.Timeout:
             error = "Timeout when talking to {}".format(self.host)
-            _LOGGER.exception(error)
+            _LOGGER.error(error)
             raise HomeAssistantError(error)
 
     def __repr__(self) -> str:
@@ -380,6 +380,6 @@ def get_states(api: API) -> List[State]:
 
     except (HomeAssistantError, ValueError, AttributeError):
         # ValueError if req.json() can't parse the json
-        _LOGGER.exception("Error fetching states")
+        _LOGGER.error("Error fetching states")
 
         return []
