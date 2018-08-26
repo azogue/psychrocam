@@ -200,9 +200,12 @@ if sys.argv[0].endswith('celery'):
     @celery.on_after_configure.connect
     def init_chart_config(sender, **kwargs):
         # from psychrochartmaker import TASK_PERIODIC_GET_HA_STATES
+        from psychrochartmaker import TASK_CLEAN_CACHE_DATA
         from psychrochartmaker.tasks import periodic_get_ha_states
+
         logging.warning(f"On INIT_CHART_CONFIG")
-        celery.send_task('clean_cache_data')
+        task = celery.send_task(TASK_CLEAN_CACHE_DATA)
+        task.get()
 
         # Program HA polling schedule
         ha_history = get_var(redis, 'ha_history')
