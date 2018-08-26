@@ -25,8 +25,13 @@ You can edit that script to change the environment variables needed to run the c
 ```
 export PORT=7777
 export LOGGING_LEVEL=WARNING
-export CUSTOM_PATH="./custom_config"
+export LOGGING_LEVEL_CELERY_WORKER=WARNING
+export LOGGING_LEVEL_CELERY_BEAT=WARNING
+export GUNICORN_NUM_WORKERS=2
+export CELERY_NUM_WORKERS=2
 export REDIS_PWD="customultrasecurepassword"
+
+export CUSTOM_PATH="./custom_config"
 
 # Use one or the other depending on your host architecture:
 # export LABEL=x64

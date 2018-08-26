@@ -7,25 +7,19 @@ python:
 services:
   - docker
 
-install:
-  - pip install psychrocam
-  - pip install coverage
-  - pip install pytest pytest-cov
-  - pip install coveralls
-
 env:
   COMPOSE_PROJECT_NAME=psychrowebcam
+  LABEL=x64
+
   LOGGING_LEVEL=INFO
+  LOGGING_LEVEL_CELERY_WORKER=INFO
+  LOGGING_LEVEL_CELERY_BEAT=INFO
+  GUNICORN_NUM_WORKERS=4
+  CELERY_NUM_WORKERS=10
   PORT=8000
   CUSTOM_PATH=./custom
-
-  SECRET_KEY=alongsecretkeyforflask
-
-  REDIS_URL=redis://redis:6379/0
   REDIS_PWD=ultrastrongpassword
 
 script:
   - docker-compose build psychrocam
   - docker-compose up
-after_sucess:
-  - coveralls
