@@ -12,6 +12,5 @@ Flask-And-Redis==0.7
 celery==4.2.1
 gevent==1.3.6
 aiohttp==3.3.2
-#matplotlib==2.0.2
 matplotlib==2.2.3
-psychrochart
+psychrochart==0.2.3
